@@ -26,8 +26,10 @@ Coco files are saved to 'data/braille_coco_[train|test|val]_data.json' by defaul
 Each method supports COCO format only.
 
 - detectron2:
+Change base path in configuration files first. 
+It is set to "/usr/local/lib/python3.6/dist-packages/detectron2/model_zoo/configs" by default.
 ```
-cfg = /usr/local/lib/python3.6/dist-packages/detectron2/model_zoo/configs/COCO-Detection/retinanet_R_50_FPN_3x.yaml
+cfg = /detectron2/braille_retinanet.yaml
 python detectron2/run.py --config-file $cfg
 ```
 
@@ -42,6 +44,7 @@ python mmdetection/tools/train.py mmdetection/configs/braille/braille_cascade_rc
 ```
 from mmdet.models import build_detector
 from mmdet.apis import inference_detector, init_detector
+from mmdet.apis import show_result_pyplot
 
 model = init_detector(
     'path_to_config.py',
@@ -49,9 +52,38 @@ model = init_detector(
 )
 img = 'path_to_image.jpg'
 result = inference_detector(model, img)
-show_result_pyplot(model, img, result, fig_size=(64,48), score_thr=0.2 )
+show_result_pyplot(model, img, result, fig_size=(64,48), score_thr=0.2)
 ```
 - test metrics
 ```
 cd ..; python mmdetection/tools/test.py 'path_to_config.py' 'path_to_checkpoint.pth' --eval bbox
+```
+
+#### detectron
+- predict image
+```
+from detectron2.engine import DefaultPredictor
+from detectron2.config import get_cfg
+import cv2
+
+img = cv2.imread('path_to_image.jpg')
+
+cfg = get_cfg()
+cfg.merge_from_file('path_to_config.yaml')
+cfg.MODEL.WEIGHTS = 'path_to_checkpoint.pth'
+predictor = DefaultPredictor(cfg)
+outputs = predictor(img)["instances"]
+```
+- show results
+```
+from detectron2.utils.visualizer import Visualizer
+
+v = Visualizer(img[:, :, ::-1], None, scale=1.2)
+out = v.draw_instance_predictions(outputs.to("cpu"))
+out.get_image()[:, :, ::-1]
+```
+- test metrics
+```
+!python detectron2/run.py --config-file $cfg \
+--eval-only MODEL.WEIGHTS 'path_to_checkpoint.pth'
 ```

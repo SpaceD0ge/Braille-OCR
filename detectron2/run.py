@@ -15,7 +15,7 @@ class Trainer(DefaultTrainer):
     def build_evaluator(cls, cfg, dataset_name, output_folder=None):
         if output_folder is None:
             output_folder = os.path.join(cfg.OUTPUT_DIR, "inference")
-        return COCOEvaluator(dataset_name, output_dir=output_folder)
+        return COCOEvaluator(dataset_name, cfg, False, output_dir=output_folder)
 
     @classmethod
     def test_with_TTA(cls, cfg, model):
@@ -32,24 +32,18 @@ class Trainer(DefaultTrainer):
         res = OrderedDict({k + "_TTA": v for k, v in res.items()})
         return res
 
-def setup_dataset_specific(cfg):
+def setup_data(cfg):
     register_coco_instances("braille_train", {}, "data/braille_coco_train_data.json", "")
     register_coco_instances("braille_val", {}, "data/braille_coco_val_data.json", "")
     cfg.DATASETS.TRAIN = ("braille_train",)
     cfg.DATASETS.TEST = ("braille_val",)
-    cfg.DATALOADER.NUM_WORKERS = 2
-    cfg.MODEL.RETINANET.NUM_CLASSES = 92
-    cfg.TEST.DETECTIONS_PER_IMAGE = 300
-    cfg.SOLVER.IMS_PER_BATCH = 4
-    cfg.SOLVER.CHECKPOINT_PERIOD = 400
-    cfg.SOLVER.MAX_ITER = 3000
     return cfg
 
     
 def setup_main(args):
     cfg = get_cfg()
     cfg.merge_from_file(args.config_file)
-    cfg = setup_dataset_specific(cfg)
+    cfg = setup_data(cfg)
     cfg.merge_from_list(args.opts)
     cfg.freeze()
     default_setup(cfg, args)
