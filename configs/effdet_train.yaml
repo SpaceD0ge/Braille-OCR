@@ -1,0 +1,36 @@
+experiment_name: effdet_d2
+task: detection
+process:
+  batch_size: 16
+  checkpoint: null
+  gpus: 1
+  max_epochs: 300
+  precision: 16
+model:
+  arch: effdet
+  type: tf_efficientdet_d2
+  image_size:
+  - 512
+  - 512
+  max_det_per_image: 500
+  pretrained: true
+  optimizer:
+    lr: 0.01
+    type: adamw
+    scheduler:
+      type: cosine_anneal
+      name: learning_rate
+      params:
+        max_epochs: 300
+        warmup_epochs: 20
+        warmup_start_lr: 0.001
+data:
+  crop_size:
+  - 512
+  - 512
+  num_classes: 92
+  read_from: disk
+  type: coco
+  train: 'braille_coco_train_data.json'
+  val: 'braille_coco_val_data.json'
+

@@ -1,91 +1,85 @@
 # Object detection for Braille annotations
 Simple scripts for training an object detection deep neural network.
 
-## Getting started
-
-#### Install preferred object detection framework
-- detectron2:
-```
-pip install detectron2 -f https://dl.fbaipublicfiles.com/detectron2/wheels/cu101/torch1.7/index.html
-```
-- mmdetection:
-```
-pip install mmcv-full==latest+torch1.7.0+cu101 -f https://download.openmmlab.com/mmcv/dist/index.html
-git clone https://github.com/open-mmlab/mmdetection.git
-cd mmdetection; pip install -r requirements/build.txt; pip install -v -e .
-```
+## EfficientDet
+A pytorch implementation based on Ross Wightman's work.
 
 #### Prepare data by converting it into the Coco format
 Original files consist of a set of raw LabelMe annotations and corresponding images.
-To convert them to a specified format and split into train-val-test parts, run this command:
+To convert them to COCO format and split into train-val-test parts, run this command:
 ```
-python prepare_data.py -root [path to annotations] -save_to ./data \
--convert [coco|mmdet|detectron|pascal] -train 0.8 -val 0.1 -test 0.1
+python prepare_data.py -root [path to annotations] -save_to ./ \
+-convert coco -train 0.8 -val 0.1 -test 0.1
 ```
-Coco files are saved to 'data/braille_coco_[train|test|val]_data.json' by default.
+COCO files are saved to './braille_coco_[train|test|val]\_data.json' by default.
+
+#### Edit a configuration file
+An example configuration file 'effdet_infer.yaml' looks like this:
+```yaml
+base: effdet_train.yaml
+process:
+  checkpoint: 'checkpoints/effdet_d2/epoch=179.ckpt'
+  gpus: 0
+  precision: 32
+model:
+  image_size:
+  - 1024
+  - 768
+data:
+  test: 'braille_coco_test_data.json'
+```
+'base' keyword allows for editing new config files without unnecessary overlapping.
 
 #### Train a model
-Each method supports COCO format only.
 
-- detectron2:
-
-Change base path in configuration files first. 
-It is set to "/usr/local/lib/python3.6/dist-packages/detectron2/model_zoo/configs" by default.
 ```
-python detectron2/run.py --config-file /detectron2/braille_retinanet.yaml
+python train.py -cfg confgis/effdet_train.yaml \
+-model_type tf_efficientdet_d3 \
+-train_file braille_coco_train_data.json \
+-val_file braille_coco_val_data.json
 ```
 
-- mmdetection:
+#### Benchmark perfomance
+
 ```
-python mmdetection/tools/train.py mmdetection/configs/braille/braille_cascade_rcnn_coco.py
+python benchmark.py -cfg configs/effdet_infer.yaml \
+-model_type tf_efficientdet_d3 \
+-trials 10
 ```
 
-## Framework-specific actions
-#### mmdetection
-- show results
-```
-from mmdet.models import build_detector
-from mmdet.apis import inference_detector, init_detector
-from mmdet.apis import show_result_pyplot
+#### Predict and visualize
+(work in progress)
 
-model = init_detector(
-    'path_to_config.py',
-    'path_to_checkpoint.pth'
+```
+python predict.py -cfg configs/effdet_infer.yaml \
+-model_type tf_efficientdet_d3 \
+-checkpoint /checkpoints/effdet_d2/epoch=129.ckpt \
+-test_file braille_coco_test_data.json \
+-save_to ./images
+```
+
+#### Predicting images in Python
+(work in progress)
+
+```python
+image_height, image_width = 1024, 768
+
+config = ConfigReader('./').process('./configs/effdet_infer.yaml')
+model_config = config['model']
+model_config['image_size'] = [image_height, image_width]
+
+model = DetectionModel.from_checkpoint(
+	'[path_to_checkpoint.ckpt]',
+	main_config=model_config
 )
-img = 'path_to_image.jpg'
-result = inference_detector(model, img)
-show_result_pyplot(model, img, result, fig_size=(64,48), score_thr=0.2)
-```
-- test metrics
-```
-cd ..; python mmdetection/tools/test.py 'path_to_config.py' 'path_to_checkpoint.pth' --eval bbox
+
+output = model({'image': image})
 ```
 
-#### detectron
-- predict image
-```
-from detectron2.engine import DefaultPredictor
-from detectron2.config import get_cfg
-import cv2
 
-img = cv2.imread('path_to_image.jpg')
+## MMDetection and Detectron2
+Refer to 'mmdedection' and 'detectron2' subdirectories
 
-cfg = get_cfg()
-cfg.merge_from_file('path_to_config.yaml')
-cfg.MODEL.WEIGHTS = 'path_to_checkpoint.pth'
-predictor = DefaultPredictor(cfg)
-outputs = predictor(img)["instances"]
-```
-- show results
-```
-from detectron2.utils.visualizer import Visualizer
-
-v = Visualizer(img[:, :, ::-1], None, scale=1.2)
-out = v.draw_instance_predictions(outputs.to("cpu"))
-out.get_image()[:, :, ::-1]
-```
-- test metrics
-```
-python detectron2/run.py --config-file 'path_to_config.yaml' \
---eval-only MODEL.WEIGHTS 'path_to_checkpoint.pth'
-```
+## Coming soon
+- Mean average precision metric for EfficientDet
+- Flask server prototype

@@ -1,0 +1,11 @@
+base: effdet_train.yaml
+process:
+  checkpoint: 'checkpoints/effdet_d2_01.15_16.57/epoch=179.ckpt'
+  gpus: 0
+  precision: 32
+model:
+  image_size:
+  - 1024
+  - 768
+data:
+  test: 'braille_coco_test_data.json'

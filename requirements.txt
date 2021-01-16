@@ -1,2 +1,3 @@
-detectron2
-https://github.com/open-mmlab/mmdetection.git
+torch>=1.7.1
+pytorch-lightning>=1.1.4
+git+https://github.com/rwightman/efficientdet-pytorch.git@645d84a6f0cd837703f98f48179a06c354902515
